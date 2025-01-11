@@ -6,6 +6,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.jsppractical.dto.CustomerDTO;
 import org.example.jsppractical.entity.Customer;
 
 import javax.json.Json;
@@ -22,7 +23,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-@WebServlet(name = "CustomerServlet", urlPatterns = "/customer")
+@WebServlet(name = "CustomerServlet", value = "/customer-servlet")
 public class CustomerServlet extends HttpServlet {
 
     private DataSource dataSource;
@@ -33,6 +34,7 @@ public class CustomerServlet extends HttpServlet {
             // Perform JNDI lookup to fetch the DataSource
             Context initContext = new InitialContext();
             dataSource = (DataSource) initContext.lookup("java:comp/env/jdbc/pool");
+            System.out.println("CustomerServlet initialized successfully");
         } catch (NamingException e) {
             throw new ServletException("Failed to lookup DataSource", e);
         }
@@ -40,6 +42,7 @@ public class CustomerServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        System.out.println("CustomerServlet.doGet is called");
         try (Connection connection = dataSource.getConnection()) {
             // Query to fetch customer data
             String query = "SELECT cust_id, name, email FROM Customer";
@@ -47,10 +50,10 @@ public class CustomerServlet extends HttpServlet {
             ResultSet resultSet = statement.executeQuery();
 
             // Create a list to hold customers
-            List<Customer> customers = new ArrayList<>();
+            List<CustomerDTO> customers = new ArrayList<>();
 
             while (resultSet.next()) {
-                Customer customer = new Customer(
+                CustomerDTO customer = new CustomerDTO(
                         resultSet.getString("cust_id"),
                         resultSet.getString("name"),
                         resultSet.getString("email")
@@ -60,11 +63,10 @@ public class CustomerServlet extends HttpServlet {
 
             System.out.println("customers = " + customers);
             // Set customer list as request attribute
-            req.setAttribute("customers", customers);
+            req.setAttribute("customerList", customers);
 
             // Forward to the JSP page to display the customer data
-            RequestDispatcher dispatcher = req.getRequestDispatcher("/index.jsp");
-            dispatcher.forward(req, resp);
+            req.getRequestDispatcher("/customer-list.jsp").forward(req, resp);
 
         } catch (SQLException e) {
             handleDatabaseError(resp, e);
@@ -74,6 +76,42 @@ public class CustomerServlet extends HttpServlet {
     }
 
     // Other HTTP methods (doPost, doPut, doDelete) remain as is, for JSON responses
+
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        System.out.println("CustomerServlet.doPost is called");
+
+        String id = req.getParameter("id");
+        String name = req.getParameter("name");
+        String email = req.getParameter("email");
+
+        try (Connection connection = dataSource.getConnection()) {
+            // Query to insert customer data
+            String query = "INSERT INTO Customer (cust_id, name, email) VALUES (?, ?, ?)";
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, id);
+            statement.setString(2, name);
+            statement.setString(3, email);
+            statement.executeUpdate();
+
+            // Build JSON response
+            JsonObject response = Json.createObjectBuilder()
+                    .add("id", id)
+                    .add("name", name)
+                    .add("email", email)
+                    .build();
+
+            // Write JSON response
+            resp.getWriter().write(response.toString());
+
+            RequestDispatcher dispatcher = req.getRequestDispatcher("/index.jsp");
+            dispatcher.forward(req, resp);
+
+        } catch (SQLException e) {
+            handleDatabaseError(resp, e);
+        }
+    }
 
     private void handleDatabaseError(HttpServletResponse resp, SQLException e) throws IOException {
         resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
