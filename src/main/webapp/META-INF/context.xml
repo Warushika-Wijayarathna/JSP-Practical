@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Context>
-    <Resource name="hibernate/SessionFactory"
-              auth="Container"
-              type="org.hibernate.SessionFactory"
-              factory="org.hibernate.internal.SessionFactoryImpl"
-              driverClassName="com.mysql.cj.jdbc.Driver"
+    <Resource name="jdbc/pool"
+              type="javax.sql.DataSource"
+              driverClassName="com.mysql.jdbc.Driver"
               url="jdbc:mysql://localhost:3306/MedplusCarePharmacy"
               username="root"
-              password="Ijse@11234"
-              hibernate.dialect="org.hibernate.dialect.MySQLDialect"
-              hibernate.show_sql="true"
-              hibernate.format_sql="true"
-              hibernate.hbm2ddl.auto="update" />
+              password="Ijse@1234"
+              maxTotal="5"
+              initialSize="5">
+
+    </Resource>
 </Context>
 
